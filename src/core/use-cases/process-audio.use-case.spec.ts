@@ -24,9 +24,11 @@ describe('ProcessAudioUseCase', () => {
         };
         fakeProcessedQueue = {
             enqueue: jest.fn(),
+            dequeue: jest.fn(),
         };
         fakeErrorQueue = {
             enqueue: jest.fn(),
+            dequeue: jest.fn(),
         };
         useCase = new ProcessAudioUseCase(
             fakeTranscriptionPort,
