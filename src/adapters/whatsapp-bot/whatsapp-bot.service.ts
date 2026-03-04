@@ -66,4 +66,18 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
             }
         }
     }
+
+    async replyToMessage(messageId: string, text: string): Promise<void> {
+        try {
+            const message = await this.client.getMessageById(messageId);
+            if (message) {
+                await message.reply(text);
+                this.logger.log(`Replied to message ${messageId}`);
+            } else {
+                this.logger.warn(`Could not find message with ID ${messageId} to reply to`);
+            }
+        } catch (error) {
+            this.logger.error(`Failed to reply to message ${messageId}`, error);
+        }
+    }
 }
