@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
-import { SendToQueueUseCase } from './use-cases/send-to-queue.use-case';
-import { ProcessFromQueueUseCase } from './use-cases/process-from-queue.use-case';
-import { DeliverResponseUseCase } from './use-cases/deliver-response.use-case';
+import { ReceiveWhatsappAudioUseCase } from './use-cases/receive-whatsapp-audio.use-case';
+import { ProcessAudioUseCase } from './use-cases/process-audio.use-case';
+import { DeliverProcessedAudioUseCase } from './use-cases/deliver-processed-audio.use-case';
+import { DeliverAudioErrorUseCase } from './use-cases/deliver-audio-error.use-case';
 
 /**
  * CoreModule — pure application logic.
@@ -13,14 +14,16 @@ import { DeliverResponseUseCase } from './use-cases/deliver-response.use-case';
  */
 @Module({
     providers: [
-        SendToQueueUseCase,
-        ProcessFromQueueUseCase,
-        DeliverResponseUseCase,
+        ReceiveWhatsappAudioUseCase,
+        ProcessAudioUseCase,
+        DeliverProcessedAudioUseCase,
+        DeliverAudioErrorUseCase,
     ],
     exports: [
-        SendToQueueUseCase,
-        ProcessFromQueueUseCase,
-        DeliverResponseUseCase,
+        ReceiveWhatsappAudioUseCase,
+        ProcessAudioUseCase,
+        DeliverProcessedAudioUseCase,
+        DeliverAudioErrorUseCase,
     ],
 })
 export class CoreModule { }

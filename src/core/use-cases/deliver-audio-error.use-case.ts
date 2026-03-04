@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { AudioErrorQueuePort } from '../ports/audio-error-queue.port';
-import { AudioErrorDeliveryPort } from '../ports/audio-error-delivery.port';
+import type { AudioErrorQueuePort } from '../ports/audio-error-queue.port';
+import type { AudioErrorDeliveryPort } from '../ports/audio-error-delivery.port';
 import { AUDIO_ERROR_QUEUE_PORT, AUDIO_ERROR_DELIVERY_PORT } from '../ports/tokens';
 
 @Injectable()

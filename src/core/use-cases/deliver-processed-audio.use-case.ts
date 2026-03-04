@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { ProcessedAudioQueuePort } from '../ports/processed-audio-queue.port';
-import { ProcessedAudioDeliveryPort } from '../ports/processed-audio-delivery.port';
+import type { ProcessedAudioQueuePort } from '../ports/processed-audio-queue.port';
+import type { ProcessedAudioDeliveryPort } from '../ports/processed-audio-delivery.port';
 import { PROCESSED_AUDIO_QUEUE_PORT, PROCESSED_AUDIO_DELIVERY_PORT } from '../ports/tokens';
 
 @Injectable()
