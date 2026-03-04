@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { QueueModule } from './adapters/queue/queue.module';
 import { DaprQueueAdapter } from './adapters/queue/dapr-queue.adapter';
 import { DaprService } from './providers/dapr/dapr.service';
+import { WhatsappBotModule } from './adapters/whatsapp-bot/whatsapp-bot.module';
 import {
   AUDIO_PROCESSING_QUEUE_PORT,
   PROCESSED_AUDIO_QUEUE_PORT,
@@ -13,7 +14,7 @@ import {
  * No adapter imports another adapter directly here or anywhere — Rule 2.
  */
 @Module({
-  imports: [QueueModule],
+  imports: [QueueModule, WhatsappBotModule],
   providers: [
     {
       provide: AUDIO_PROCESSING_QUEUE_PORT,
