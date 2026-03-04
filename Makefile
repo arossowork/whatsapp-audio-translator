@@ -12,7 +12,7 @@ help: ## Show this help
 
 deploy-local: ## Deploy the Local Radius environment (Redis) and the application
 	@echo "Registering Local Redis Recipe..."
-	rad recipe register default --template-kind bicep --template-path bicep/recipes/local-redis.bicep --resource-type Applications.Dapr/pubSubBrokers
+	rad recipe register default --template-kind bicep --template-path ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:0.54 --resource-type Applications.Dapr/pubSubBrokers
 	@echo "Deploying Application..."
 	rad deploy app.bicep -a $(APP_NAME) -p port=$(PORT)
 
