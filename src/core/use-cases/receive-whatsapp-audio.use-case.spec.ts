@@ -9,6 +9,7 @@ describe('ReceiveWhatsappAudioUseCase', () => {
     beforeEach(() => {
         fakeAudioQueue = {
             enqueue: jest.fn(),
+            dequeue: jest.fn(),
         };
         useCase = new ReceiveWhatsappAudioUseCase(fakeAudioQueue);
     });

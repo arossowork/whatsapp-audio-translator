@@ -6,11 +6,13 @@ import type { TranscriptionPort } from '../ports/transcription.port';
 import type { AudioSummaryPort } from '../ports/audio-summary.port';
 import type { ProcessedAudioQueuePort } from '../ports/processed-audio-queue.port';
 import type { AudioErrorQueuePort } from '../ports/audio-error-queue.port';
+import type { AudioProcessingQueuePort } from '../ports/audio-processing-queue.port';
 import {
     TRANSCRIPTION_PORT,
     AUDIO_SUMMARY_PORT,
     PROCESSED_AUDIO_QUEUE_PORT,
     AUDIO_ERROR_QUEUE_PORT,
+    AUDIO_PROCESSING_QUEUE_PORT,
 } from '../ports/tokens';
 
 @Injectable()
@@ -20,9 +22,15 @@ export class ProcessAudioUseCase {
         @Inject(AUDIO_SUMMARY_PORT) private readonly summaryPort: AudioSummaryPort,
         @Inject(PROCESSED_AUDIO_QUEUE_PORT) private readonly processedQueue: ProcessedAudioQueuePort,
         @Inject(AUDIO_ERROR_QUEUE_PORT) private readonly errorQueue: AudioErrorQueuePort,
+        @Inject(AUDIO_PROCESSING_QUEUE_PORT) private readonly processingQueue: AudioProcessingQueuePort,
     ) { }
 
-    async execute(audio: WhatsappAudio): Promise<void> {
+    async execute(): Promise<void> {
+        const audio = this.processingQueue.dequeue();
+        if (!audio) {
+            return;
+        }
+
         try {
             const transcription = await this.transcriptionPort.transcribe(audio.id, audio.audioContent);
             const summary = await this.summaryPort.summarize(transcription);
