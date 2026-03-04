@@ -3,15 +3,18 @@ import { AudioErrorQueuePort } from '../ports/audio-error-queue.port';
 import { AudioErrorDeliveryPort } from '../ports/audio-error-delivery.port';
 import { AudioProcessingError } from '../domain/audio-processing-error.entity';
 
-describe('DeliverAudioErrorUseCase', () => {
+describe('DeliverAudioErrorUseCase (Observer Pattern)', () => {
     let useCase: DeliverAudioErrorUseCase;
     let fakeErrorQueuePort: AudioErrorQueuePort;
     let fakeDeliveryPort: AudioErrorDeliveryPort;
+    let onModuleInitCallback: (error: AudioProcessingError) => void;
 
     beforeEach(() => {
         fakeErrorQueuePort = {
             enqueue: jest.fn(),
-            dequeue: jest.fn(),
+            subscribe: jest.fn().mockImplementation((cb) => {
+                onModuleInitCallback = cb;
+            }),
         };
         fakeDeliveryPort = {
             deliver: jest.fn(),
@@ -19,24 +22,20 @@ describe('DeliverAudioErrorUseCase', () => {
         useCase = new DeliverAudioErrorUseCase(fakeErrorQueuePort, fakeDeliveryPort);
     });
 
-    it('should dequeue an error and deliver it if available', () => {
-        const error = new AudioProcessingError('audio-123', 'failure reason');
-
-        (fakeErrorQueuePort.dequeue as jest.Mock).mockReturnValue(error);
-
-        useCase.execute();
-
-        expect(fakeErrorQueuePort.dequeue).toHaveBeenCalledTimes(1);
-        expect(fakeDeliveryPort.deliver).toHaveBeenCalledTimes(1);
-        expect(fakeDeliveryPort.deliver).toHaveBeenCalledWith(error);
+    it('should subscribe to the queue on module init', () => {
+        useCase.onModuleInit();
+        expect(fakeErrorQueuePort.subscribe).toHaveBeenCalledTimes(1);
+        expect(onModuleInitCallback).toBeDefined();
     });
 
-    it('should do nothing if queue is empty', () => {
-        (fakeErrorQueuePort.dequeue as jest.Mock).mockReturnValue(null);
+    it('should deliver the error when the queue emits an item', () => {
+        useCase.onModuleInit();
+        const error = new AudioProcessingError('audio-123', 'failure reason');
 
-        useCase.execute();
+        // Simulate the queue emitting an item
+        onModuleInitCallback(error);
 
-        expect(fakeErrorQueuePort.dequeue).toHaveBeenCalledTimes(1);
-        expect(fakeDeliveryPort.deliver).not.toHaveBeenCalled();
+        expect(fakeDeliveryPort.deliver).toHaveBeenCalledTimes(1);
+        expect(fakeDeliveryPort.deliver).toHaveBeenCalledWith(error);
     });
 });

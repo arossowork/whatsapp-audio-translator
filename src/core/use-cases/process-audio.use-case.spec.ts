@@ -9,14 +9,15 @@ import { ProcessedAudioQueuePort } from '../ports/processed-audio-queue.port';
 import { AudioErrorQueuePort } from '../ports/audio-error-queue.port';
 import { AudioProcessingQueuePort } from '../ports/audio-processing-queue.port';
 
-describe('ProcessAudioUseCase', () => {
+describe('ProcessAudioUseCase (Observer Pattern)', () => {
     let useCase: ProcessAudioUseCase;
     let fakeTranscriptionPort: TranscriptionPort;
     let fakeSummaryPort: AudioSummaryPort;
     let fakeProcessedQueue: ProcessedAudioQueuePort;
     let fakeErrorQueue: AudioErrorQueuePort;
-
     let fakeProcessingQueue: AudioProcessingQueuePort;
+
+    let onModuleInitCallback: (audio: WhatsappAudio) => Promise<void>;
 
     beforeEach(() => {
         fakeTranscriptionPort = {
@@ -27,15 +28,17 @@ describe('ProcessAudioUseCase', () => {
         };
         fakeProcessedQueue = {
             enqueue: jest.fn(),
-            dequeue: jest.fn(),
+            subscribe: jest.fn(),
         };
         fakeErrorQueue = {
             enqueue: jest.fn(),
-            dequeue: jest.fn(),
+            subscribe: jest.fn(),
         };
         fakeProcessingQueue = {
             enqueue: jest.fn(),
-            dequeue: jest.fn(),
+            subscribe: jest.fn().mockImplementation((cb) => {
+                onModuleInitCallback = cb;
+            }),
         };
         useCase = new ProcessAudioUseCase(
             fakeTranscriptionPort,
@@ -46,17 +49,23 @@ describe('ProcessAudioUseCase', () => {
         );
     });
 
-    it('should process audio successfully and enqueue the result', async () => {
+    it('should subscribe to the queue on module init', () => {
+        useCase.onModuleInit();
+        expect(fakeProcessingQueue.subscribe).toHaveBeenCalledTimes(1);
+        expect(onModuleInitCallback).toBeDefined();
+    });
+
+    it('should process audio successfully and enqueue the result when item is emitted', async () => {
+        useCase.onModuleInit();
+
         const audio = new WhatsappAudio('audio-123', 'content', 'sender', 'sender');
         const transcription = new Transcription('audio-123', [new TranscriptionSegment(0, 10, 'hello')], 'hello');
 
-        (fakeProcessingQueue.dequeue as jest.Mock).mockReturnValue(audio);
         (fakeTranscriptionPort.transcribe as jest.Mock).mockResolvedValue(transcription);
         (fakeSummaryPort.summarize as jest.Mock).mockResolvedValue('summary text');
 
-        await useCase.execute();
+        await onModuleInitCallback(audio);
 
-        expect(fakeProcessingQueue.dequeue).toHaveBeenCalledTimes(1);
         expect(fakeTranscriptionPort.transcribe).toHaveBeenCalledWith('audio-123', 'content');
         expect(fakeSummaryPort.summarize).toHaveBeenCalledWith(transcription);
 
@@ -70,15 +79,15 @@ describe('ProcessAudioUseCase', () => {
     });
 
     it('should enqueue an error if transcription fails', async () => {
+        useCase.onModuleInit();
+
         const audio = new WhatsappAudio('audio-123', 'content', 'sender', 'sender');
         const error = new Error('Transcription failed');
 
-        (fakeProcessingQueue.dequeue as jest.Mock).mockReturnValue(audio);
         (fakeTranscriptionPort.transcribe as jest.Mock).mockRejectedValue(error);
 
-        await useCase.execute();
+        await onModuleInitCallback(audio);
 
-        expect(fakeProcessingQueue.dequeue).toHaveBeenCalledTimes(1);
         expect(fakeErrorQueue.enqueue).toHaveBeenCalledTimes(1);
         const processingError = (fakeErrorQueue.enqueue as jest.Mock).mock.calls[0][0] as AudioProcessingError;
         expect(processingError.whatsappAudioId).toBe('audio-123');
@@ -87,32 +96,21 @@ describe('ProcessAudioUseCase', () => {
     });
 
     it('should enqueue an error if summarization fails', async () => {
+        useCase.onModuleInit();
+
         const audio = new WhatsappAudio('audio-123', 'content', 'sender', 'sender');
         const transcription = new Transcription('audio-123', [new TranscriptionSegment(0, 10, 'hello')], 'hello');
 
-        (fakeProcessingQueue.dequeue as jest.Mock).mockReturnValue(audio);
         (fakeTranscriptionPort.transcribe as jest.Mock).mockResolvedValue(transcription);
         const error = new Error('Summarization failed');
         (fakeSummaryPort.summarize as jest.Mock).mockRejectedValue(error);
 
-        await useCase.execute();
+        await onModuleInitCallback(audio);
 
-        expect(fakeProcessingQueue.dequeue).toHaveBeenCalledTimes(1);
         expect(fakeErrorQueue.enqueue).toHaveBeenCalledTimes(1);
         const processingError = (fakeErrorQueue.enqueue as jest.Mock).mock.calls[0][0] as AudioProcessingError;
         expect(processingError.whatsappAudioId).toBe('audio-123');
         expect(processingError.reason).toContain('Summarization failed');
         expect(fakeProcessedQueue.enqueue).not.toHaveBeenCalled();
-    });
-
-    it('should do nothing if processing queue is empty', async () => {
-        (fakeProcessingQueue.dequeue as jest.Mock).mockReturnValue(null);
-
-        await useCase.execute();
-
-        expect(fakeProcessingQueue.dequeue).toHaveBeenCalledTimes(1);
-        expect(fakeTranscriptionPort.transcribe).not.toHaveBeenCalled();
-        expect(fakeProcessedQueue.enqueue).not.toHaveBeenCalled();
-        expect(fakeErrorQueue.enqueue).not.toHaveBeenCalled();
     });
 });

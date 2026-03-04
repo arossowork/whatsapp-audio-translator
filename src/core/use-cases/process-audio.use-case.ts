@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
 import { WhatsappAudio } from '../domain/whatsapp-audio.entity';
 import { ProcessedAudio } from '../domain/processed-audio.entity';
 import { AudioProcessingError } from '../domain/audio-processing-error.entity';
@@ -16,7 +16,7 @@ import {
 } from '../ports/tokens';
 
 @Injectable()
-export class ProcessAudioUseCase {
+export class ProcessAudioUseCase implements OnModuleInit {
     constructor(
         @Inject(TRANSCRIPTION_PORT) private readonly transcriptionPort: TranscriptionPort,
         @Inject(AUDIO_SUMMARY_PORT) private readonly summaryPort: AudioSummaryPort,
@@ -25,12 +25,11 @@ export class ProcessAudioUseCase {
         @Inject(AUDIO_PROCESSING_QUEUE_PORT) private readonly processingQueue: AudioProcessingQueuePort,
     ) { }
 
-    async execute(): Promise<void> {
-        const audio = this.processingQueue.dequeue();
-        if (!audio) {
-            return;
-        }
+    onModuleInit(): void {
+        this.processingQueue.subscribe(this.handleAudio.bind(this));
+    }
 
+    private async handleAudio(audio: WhatsappAudio): Promise<void> {
         try {
             const transcription = await this.transcriptionPort.transcribe(audio.id, audio.audioContent);
             const summary = await this.summaryPort.summarize(transcription);

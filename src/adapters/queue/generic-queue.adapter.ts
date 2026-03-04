@@ -2,13 +2,15 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GenericQueueAdapter<T> {
-    private readonly store: T[] = [];
+    private readonly listeners: ((item: T) => void)[] = [];
 
     enqueue(item: T): void {
-        this.store.push(item);
+        for (const listener of this.listeners) {
+            listener(item);
+        }
     }
 
-    dequeue(): T | null {
-        return this.store.shift() ?? null;
+    subscribe(callback: (item: T) => void): void {
+        this.listeners.push(callback);
     }
 }

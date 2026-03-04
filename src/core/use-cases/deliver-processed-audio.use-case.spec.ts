@@ -4,15 +4,18 @@ import { ProcessedAudioDeliveryPort } from '../ports/processed-audio-delivery.po
 import { ProcessedAudio } from '../domain/processed-audio.entity';
 import { Transcription, TranscriptionSegment } from '../domain/transcription.entity';
 
-describe('DeliverProcessedAudioUseCase', () => {
+describe('DeliverProcessedAudioUseCase (Observer Pattern)', () => {
     let useCase: DeliverProcessedAudioUseCase;
     let fakeQueuePort: ProcessedAudioQueuePort;
     let fakeDeliveryPort: ProcessedAudioDeliveryPort;
+    let onModuleInitCallback: (audio: ProcessedAudio) => void;
 
     beforeEach(() => {
         fakeQueuePort = {
             enqueue: jest.fn(),
-            dequeue: jest.fn(),
+            subscribe: jest.fn().mockImplementation((cb) => {
+                onModuleInitCallback = cb;
+            }),
         };
         fakeDeliveryPort = {
             deliver: jest.fn(),
@@ -20,25 +23,22 @@ describe('DeliverProcessedAudioUseCase', () => {
         useCase = new DeliverProcessedAudioUseCase(fakeQueuePort, fakeDeliveryPort);
     });
 
-    it('should dequeue an item and deliver it if available', () => {
+    it('should subscribe to the queue on module init', () => {
+        useCase.onModuleInit();
+        expect(fakeQueuePort.subscribe).toHaveBeenCalledTimes(1);
+        expect(onModuleInitCallback).toBeDefined();
+    });
+
+    it('should deliver the processed audio when the queue emits an item', () => {
+        useCase.onModuleInit();
+
         const transcription = new Transcription('audio-123', [new TranscriptionSegment(0, 10, 'text')], 'text');
         const processedAudio = new ProcessedAudio('audio-123', transcription, 'summary');
 
-        (fakeQueuePort.dequeue as jest.Mock).mockReturnValue(processedAudio);
+        // Simulate the queue emitting an item
+        onModuleInitCallback(processedAudio);
 
-        useCase.execute();
-
-        expect(fakeQueuePort.dequeue).toHaveBeenCalledTimes(1);
         expect(fakeDeliveryPort.deliver).toHaveBeenCalledTimes(1);
         expect(fakeDeliveryPort.deliver).toHaveBeenCalledWith(processedAudio);
-    });
-
-    it('should do nothing if queue is empty', () => {
-        (fakeQueuePort.dequeue as jest.Mock).mockReturnValue(null);
-
-        useCase.execute();
-
-        expect(fakeQueuePort.dequeue).toHaveBeenCalledTimes(1);
-        expect(fakeDeliveryPort.deliver).not.toHaveBeenCalled();
     });
 });
