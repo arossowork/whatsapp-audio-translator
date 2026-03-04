@@ -14,7 +14,14 @@ export class DaprService implements OnModuleInit, OnModuleDestroy {
 
         this.client = new DaprClient({ daprHost, daprPort });
         // DaprServer needs to listen to requests from the Dapr sidecar
-        this.server = new DaprServer({ serverHost, serverPort, daprHost, daprPort });
+        this.server = new DaprServer({
+            serverHost,
+            serverPort,
+            clientOptions: {
+                daprHost,
+                daprPort,
+            }
+        });
     }
 
     async onModuleInit() {

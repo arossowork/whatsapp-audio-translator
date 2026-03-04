@@ -33,6 +33,7 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
     environment: environment
     container: {
       image: 'next-clean-arch:latest'
+      imagePullPolicy: 'Never'
       ports: {
         app: {
           containerPort: int(port)
