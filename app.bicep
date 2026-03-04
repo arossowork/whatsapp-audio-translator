@@ -1,4 +1,4 @@
-import radius as rad
+extension radius
 
 @description('Specifies the environment for the resource.')
 param environment string
@@ -7,17 +7,21 @@ param environment string
 param application string
 
 @description('The port for the NestJS application')
-param port int = 3000
+param port string = '3000'
 
 @description('The port Dapr sidecar listens on')
-param daprPort int = 3500
+param daprPort string = '3500'
 
-// 1. Deploy the Queue module
-module queue 'src/adapters/queue/queue.bicep' = {
-  name: 'queue-module'
-  params: {
+// 1. Deploy the Dapr Pub/Sub Broker
+resource daprPubsub 'Applications.Dapr/pubSubBrokers@2023-10-01-preview' = {
+  name: 'app-pubsub'
+  properties: {
     environment: environment
     application: application
+    // Using a Radius Recipe ensures that cloud configurations like SQS/GCP PubSub or Redis are handled transparently.
+    recipe: {
+      name: 'default'
+    }
   }
 }
 
@@ -27,30 +31,38 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
   properties: {
     application: application
     environment: environment
-    image: 'next-clean-arch:latest'
-    ports: {
-      app: {
-        containerPort: port
+    container: {
+      image: 'next-clean-arch:latest'
+      ports: {
+        app: {
+          containerPort: int(port)
+        }
+      }
+      env: {
+        APP_PORT: {
+          value: port
+        }
+        DAPR_HOST: {
+          value: '127.0.0.1'
+        }
+        DAPR_HTTP_PORT: {
+          value: daprPort
+        }
       }
     }
     connections: {
       pubsub: {
-        source: queue.outputs.id
+        source: daprPubsub.id
       }
     }
     extensions: [
       {
         kind: 'daprSidecar'
         appId: 'next-clean-arch'
-        appPort: port
+        appPort: int(port)
         // Ensures the Pub/Sub is bound to this sidecar
         // Connections inherently bind to the environment Dapr settings but we explicitly point out the connection above.
       }
     ]
-    env: {
-      APP_PORT: port
-      DAPR_HOST: '127.0.0.1'
-      DAPR_HTTP_PORT: daprPort
-    }
   }
 }

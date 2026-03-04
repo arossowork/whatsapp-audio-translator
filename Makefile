@@ -11,23 +11,23 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 deploy-local: ## Deploy the Local Radius environment (Redis) and the application
-	@echo "Deploying Local Environment..."
-	rad deploy bicep/environments/local.bicep -p environment=local
-	@echo "Deploying Application to Local Environment..."
-	rad deploy app.bicep -p environment=local -p application=$(APP_NAME) -p port=$(PORT)
+	@echo "Registering Local Redis Recipe..."
+	rad recipe register default --template-kind bicep --template-path bicep/recipes/local-redis.bicep --resource-type Applications.Dapr/pubSubBrokers
+	@echo "Deploying Application..."
+	rad deploy app.bicep -a $(APP_NAME) -p port=$(PORT)
 
 deploy-aws: ## Deploy the AWS Radius environment (SQS) and the application
-	@echo "Deploying AWS Environment..."
-	rad deploy bicep/environments/aws.bicep -p environment=aws
-	@echo "Deploying Application to AWS Environment..."
-	rad deploy app.bicep -p environment=aws -p application=$(APP_NAME) -p port=$(PORT)
+	@echo "Registering AWS SQS Recipe..."
+	rad recipe register default --template-kind bicep --template-path ghcr.io/radius-project/recipes/aws/sqs:0.54 --resource-type Applications.Dapr/pubSubBrokers
+	@echo "Deploying Application..."
+	rad deploy app.bicep -a $(APP_NAME) -p port=$(PORT)
 
 deploy-gcp: ## Deploy the GCP Radius environment (Pub/Sub) and the application
-	@echo "Deploying GCP Environment..."
-	rad deploy bicep/environments/gcp.bicep -p environment=gcp
-	@echo "Deploying Application to GCP Environment..."
-	rad deploy app.bicep -p environment=gcp -p application=$(APP_NAME) -p port=$(PORT)
+	@echo "Registering GCP PubSub Recipe..."
+	rad recipe register default --template-kind bicep --template-path ghcr.io/radius-project/recipes/gcp/pubsubbrokers:0.54 --resource-type Applications.Dapr/pubSubBrokers
+	@echo "Deploying Application..."
+	rad deploy app.bicep -a $(APP_NAME) -p port=$(PORT)
 
-run-local: ## Run the application locally with Radius (live development)
-	@echo "Running Application Locally..."
-	rad run app.bicep -p environment=local -p application=$(APP_NAME) -p port=$(PORT)
+purge: ## Purge the Radius application
+	@echo "Purging Radius application..."
+	rad app delete $(APP_NAME) --yes
