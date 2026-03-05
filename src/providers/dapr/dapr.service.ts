@@ -9,8 +9,8 @@ export class DaprService implements OnModuleInit, OnModuleDestroy {
     constructor() {
         const daprHost = process.env.DAPR_HOST || '127.0.0.1';
         const daprPort = process.env.DAPR_HTTP_PORT || '3500';
-        const serverHost = process.env.SERVER_HOST || '127.0.0.1';
-        const serverPort = process.env.APP_PORT || '3000';
+        const serverHost = process.env.DAPR_SERVER_HOST || '127.0.0.1';
+        const serverPort = process.env.DAPR_APP_PORT || '3001';
 
         this.client = new DaprClient({ daprHost, daprPort });
         // DaprServer needs to listen to requests from the Dapr sidecar

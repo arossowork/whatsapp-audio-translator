@@ -49,6 +49,9 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
         DAPR_HTTP_PORT: {
           value: daprPort
         }
+        DAPR_APP_PORT: {
+          value: '3001'
+        }
       }
     }
     connections: {
@@ -60,9 +63,13 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
       {
         kind: 'daprSidecar'
         appId: 'next-clean-arch'
-        appPort: int(port)
+        appPort: 3001
         // Ensures the Pub/Sub is bound to this sidecar
         // Connections inherently bind to the environment Dapr settings but we explicitly point out the connection above.
+      }
+      {
+        kind: 'manualScaling'
+        replicas: 1
       }
     ]
   }
