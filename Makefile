@@ -1,8 +1,10 @@
-.PHONY: deploy-local deploy-aws deploy-gcp run-local help cluster-restart radius-clean cluster-status
+.PHONY: deploy-local deploy-aws deploy-gcp run-local help cluster-restart radius-clean cluster-status app-logs app-qr app-restart
 
 APP_NAME=next-clean-arch
 # Default port if not supplied
 PORT ?= 3000
+# Default namespace is typically the environment name (default) hyphen application name
+NAMESPACE ?= default-$(APP_NAME)
 
 help: ## Show this help
 	@echo "Usage: make [target]"
@@ -51,3 +53,15 @@ radius-clean: ## Delete stuck Radius system pods to force an image pull retry
 cluster-status: ## Check the status of the local kubernetes cluster pods
 	@echo "Checking pods in all namespaces..."
 	kubectl get pods -A
+
+app-logs: ## Tail the logs of the next-clean-arch application pod
+	@echo "Tailing application logs in namespace $(NAMESPACE)..."
+	kubectl logs -l app.kubernetes.io/name=$(APP_NAME) -n $(NAMESPACE) -c $(APP_NAME) -f --tail=100
+
+app-qr: ## Print the most recent QR code from the logs
+	@echo "Fetching the latest QR code from namespace $(NAMESPACE)..."
+	kubectl logs -l app.kubernetes.io/name=$(APP_NAME) -n $(NAMESPACE) -c $(APP_NAME) --tail=100
+
+app-restart: ## Restart the application pod
+	@echo "Restarting the $(APP_NAME) pod in namespace $(NAMESPACE)..."
+	kubectl delete pod -l app.kubernetes.io/name=$(APP_NAME) -n $(NAMESPACE)
