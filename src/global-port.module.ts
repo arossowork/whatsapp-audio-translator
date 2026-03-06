@@ -6,7 +6,8 @@ import {
     AUDIO_ERROR_DELIVERY_PORT,
     PROCESSED_AUDIO_DELIVERY_PORT,
     TRANSCRIPTION_PORT,
-    AUDIO_SUMMARY_PORT
+    AUDIO_SUMMARY_PORT,
+    QR_CODE_DISPLAY_PORT
 } from './core/ports/tokens';
 import { QueueModule } from './adapters/queue/queue.module';
 import { WhatsappBotModule } from './adapters/whatsapp-bot/whatsapp-bot.module';
@@ -17,6 +18,7 @@ import { WhatsappAudioErrorDeliveryAdapter } from './adapters/whatsapp-bot/whats
 import { WhatsappProcessedAudioDeliveryAdapter } from './adapters/whatsapp-bot/whatsapp-processed-audio-delivery.adapter';
 import { MockTranscriptionAdapter } from './adapters/mock-llm/mock-transcription.adapter';
 import { MockAudioSummaryAdapter } from './adapters/mock-llm/mock-audio-summary.adapter';
+import { CliQrCodeDisplayAdapter } from './adapters/qr-code-display/cli-qr-code-display.adapter';
 
 const portProviders = [
     {
@@ -49,6 +51,10 @@ const portProviders = [
     {
         provide: AUDIO_SUMMARY_PORT,
         useClass: MockAudioSummaryAdapter,
+    },
+    {
+        provide: QR_CODE_DISPLAY_PORT,
+        useClass: CliQrCodeDisplayAdapter,
     },
 ];
 

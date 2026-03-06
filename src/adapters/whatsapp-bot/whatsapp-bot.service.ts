@@ -1,8 +1,9 @@
 import { Injectable, Inject, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { Client, LocalAuth, Message } from 'whatsapp-web.js';
-import * as qrcode from 'qrcode-terminal';
 import { ReceiveWhatsappAudioUseCase } from '../../core/use-cases/receive-whatsapp-audio.use-case';
+import { PresentQrCodeUseCase } from '../../core/use-cases/present-qr-code.use-case';
 import { WhatsappAudio } from '../../core/domain/whatsapp-audio.entity';
+import { QrCode } from '../../core/domain/qr-code.entity';
 
 @Injectable()
 export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
@@ -11,6 +12,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
 
     constructor(
         private readonly receiveWhatsappAudio: ReceiveWhatsappAudioUseCase,
+        private readonly presentQrCodeUseCase: PresentQrCodeUseCase,
     ) { }
 
     async onModuleInit() {
@@ -22,8 +24,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
         });
 
         this.client.on('qr', (qr) => {
-            this.logger.log('Scan this QR code in WhatsApp to log in:');
-            qrcode.generate(qr, { small: true });
+            this.handleQr(qr);
         });
 
         this.client.on('ready', () => {
@@ -42,6 +43,15 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     async onModuleDestroy() {
         if (this.client) {
             await this.client.destroy();
+        }
+    }
+
+    handleQr(qr: string): void {
+        try {
+            const qrCodeEntity = new QrCode(qr);
+            this.presentQrCodeUseCase.execute(qrCodeEntity);
+        } catch (error) {
+            this.logger.error('Failed to present QR code', error);
         }
     }
 

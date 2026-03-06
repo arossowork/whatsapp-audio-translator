@@ -3,6 +3,7 @@ import { ReceiveWhatsappAudioUseCase } from './use-cases/receive-whatsapp-audio.
 import { ProcessAudioUseCase } from './use-cases/process-audio.use-case';
 import { DeliverProcessedAudioUseCase } from './use-cases/deliver-processed-audio.use-case';
 import { DeliverAudioErrorUseCase } from './use-cases/deliver-audio-error.use-case';
+import { PresentQrCodeUseCase } from './use-cases/present-qr-code.use-case';
 
 /**
  * CoreModule — pure application logic.
@@ -18,12 +19,14 @@ import { DeliverAudioErrorUseCase } from './use-cases/deliver-audio-error.use-ca
         ProcessAudioUseCase,
         DeliverProcessedAudioUseCase,
         DeliverAudioErrorUseCase,
+        PresentQrCodeUseCase,
     ],
     exports: [
         ReceiveWhatsappAudioUseCase,
         ProcessAudioUseCase,
         DeliverProcessedAudioUseCase,
         DeliverAudioErrorUseCase,
+        PresentQrCodeUseCase,
     ],
 })
 export class CoreModule { }

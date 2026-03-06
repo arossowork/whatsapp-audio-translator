@@ -1,14 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WhatsappBotService } from './whatsapp-bot.service';
 import { ReceiveWhatsappAudioUseCase } from '../../core/use-cases/receive-whatsapp-audio.use-case';
+import { PresentQrCodeUseCase } from '../../core/use-cases/present-qr-code.use-case';
 import { WhatsappAudio } from '../../core/domain/whatsapp-audio.entity';
 
 describe('WhatsappBotService', () => {
     let service: WhatsappBotService;
     let receiveWhatsappAudioUseCase: jest.Mocked<ReceiveWhatsappAudioUseCase>;
+    let presentQrCodeUseCase: jest.Mocked<PresentQrCodeUseCase>;
 
     beforeEach(async () => {
         const mockUseCase = {
+            execute: jest.fn(),
+        };
+
+        const mockPresentQrCodeUseCase = {
             execute: jest.fn(),
         };
 
@@ -19,15 +25,34 @@ describe('WhatsappBotService', () => {
                     provide: ReceiveWhatsappAudioUseCase,
                     useValue: mockUseCase,
                 },
+                {
+                    provide: PresentQrCodeUseCase,
+                    useValue: mockPresentQrCodeUseCase,
+                },
             ],
         }).compile();
 
         service = module.get<WhatsappBotService>(WhatsappBotService);
         receiveWhatsappAudioUseCase = module.get(ReceiveWhatsappAudioUseCase);
+        presentQrCodeUseCase = module.get(PresentQrCodeUseCase);
     });
 
     it('should be defined', () => {
         expect(service).toBeDefined();
+    });
+
+    describe('when a QR code is generated', () => {
+        it('should call PresentQrCodeUseCase with the QR code string', () => {
+            // We will simulate the 'qr' event on the client.
+            // Since the client is internal, we can test the expected behavior by testing handleQr logic
+            const qrString = 'fake_qr_code_string';
+            service.handleQr(qrString);
+
+            expect(presentQrCodeUseCase.execute).toHaveBeenCalledTimes(1);
+            expect(presentQrCodeUseCase.execute).toHaveBeenCalledWith(
+                expect.objectContaining({ value: qrString })
+            );
+        });
     });
 
     describe('when receiving a message', () => {
