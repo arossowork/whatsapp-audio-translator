@@ -34,6 +34,13 @@ export class ProcessAudioUseCase implements OnModuleInit {
     }
 
     private async handleAudio(audio: WhatsappAudio): Promise<void> {
+        if (!audio?.id) {
+            this.logger.error('ProcessAudioUseCase', `Audio processing failed: Audio ID is missing`, '');
+            const error = new AudioProcessingError('UNKNOWN_ID', 'Audio ID is missing');
+            this.errorQueue.enqueue(error);
+            return;
+        }
+
         this.logger.log('ProcessAudioUseCase', `Processing started for audioId=${audio.id}`);
 
         try {

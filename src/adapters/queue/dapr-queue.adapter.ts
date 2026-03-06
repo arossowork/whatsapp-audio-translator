@@ -30,10 +30,27 @@ export class DaprQueueAdapter<T> {
             this.daprService.server.pubsub.subscribe(
                 this.pubsubName,
                 this.topicName,
-                async (data: T) => {
+                async (data: any) => {
                     this.logger.debug(`Received message from ${this.pubsubName}/${this.topicName} — notifying ${this.listeners.length} listener(s)`);
+
+                    let parsedData = data;
+                    if (data && typeof data === 'object') {
+                        // Check if it's still wrapped in a CloudEvent or contains a data wrapper
+                        if ('data' in data && data.data) {
+                            parsedData = data.data;
+                        }
+                    }
+
+                    if (typeof parsedData === 'string') {
+                        try {
+                            parsedData = JSON.parse(parsedData);
+                        } catch (e) {
+                            // If it fails to parse, just pass it as is
+                        }
+                    }
+
                     for (const listener of this.listeners) {
-                        listener(data);
+                        listener(parsedData as T);
                     }
                 },
             );

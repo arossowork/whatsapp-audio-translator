@@ -24,17 +24,17 @@ import { CliQrCodeDisplayAdapter } from './adapters/qr-code-display/cli-qr-code-
 const portProviders = [
     {
         provide: AUDIO_PROCESSING_QUEUE_PORT,
-        useFactory: (daprService: DaprService) => new DaprQueueAdapter(daprService, 'pubsub', 'audio-processing'),
+        useFactory: (daprService: DaprService) => new DaprQueueAdapter(daprService, 'app-pubsub', 'audio-processing'),
         inject: [DaprService],
     },
     {
         provide: PROCESSED_AUDIO_QUEUE_PORT,
-        useFactory: (daprService: DaprService) => new DaprQueueAdapter(daprService, 'pubsub', 'processed-audio'),
+        useFactory: (daprService: DaprService) => new DaprQueueAdapter(daprService, 'app-pubsub', 'processed-audio'),
         inject: [DaprService],
     },
     {
         provide: AUDIO_ERROR_QUEUE_PORT,
-        useFactory: (daprService: DaprService) => new DaprQueueAdapter(daprService, 'pubsub', 'audio-error'),
+        useFactory: (daprService: DaprService) => new DaprQueueAdapter(daprService, 'app-pubsub', 'audio-error'),
         inject: [DaprService],
     },
     {

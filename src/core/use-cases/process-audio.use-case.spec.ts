@@ -142,6 +142,20 @@ describe('ProcessAudioUseCase (Observer Pattern)', () => {
         expect(fakeProcessedQueue.enqueue).not.toHaveBeenCalled();
     });
 
+    it('should throw or enqueue an error if audio id is undefined', async () => {
+        useCase.onModuleInit();
+
+        const audio = { audioContent: 'content', sender: 'sender', receiver: 'receiver' } as any; // No ID
+
+        await onModuleInitCallback(audio);
+
+        expect(fakeErrorQueue.enqueue).toHaveBeenCalledTimes(1);
+        const processingError = (fakeErrorQueue.enqueue as jest.Mock).mock.calls[0][0] as AudioProcessingError;
+        expect(processingError.reason).toContain('Audio ID is missing');
+        expect(fakeProcessedQueue.enqueue).not.toHaveBeenCalled();
+        expect(fakeTranscriptionPort.transcribe).not.toHaveBeenCalled();
+    });
+
     it('should log error when processing fails', async () => {
         useCase.onModuleInit();
 
