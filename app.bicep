@@ -15,6 +15,9 @@ param daprPort string = '3500'
 @description('The OpenAI API Key for the LLM Module')
 param openaiApiKey string = ''
 
+@description('A timestamp used to force a Kubernetes rollout on every deploy')
+param deployTimestamp string = utcNow()
+
 // 1. Deploy the Dapr Pub/Sub Broker
 resource daprPubsub 'Applications.Dapr/pubSubBrokers@2023-10-01-preview' = {
   name: 'app-pubsub'
@@ -68,6 +71,9 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
         }
         DAPR_APP_PORT: {
           value: '3001'
+        }
+        DEPLOY_TIMESTAMP: {
+          value: deployTimestamp
         }
         OPENAI_API_KEY: {
           valueFrom: {
