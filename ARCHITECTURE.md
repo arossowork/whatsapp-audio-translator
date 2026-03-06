@@ -239,6 +239,35 @@ Tests are **co-located** with the file they cover, not in a separate `test/` fol
 - [ ] `npm run test` passes with **no skipped tests** (`xit`, `xdescribe`, `.skip`)
 - [ ] Coverage for `src/core/` is **≥ 90%** (enforced in `jest.config.ts`)
 
+### Rule 9 — Package by Feature / Module (Modular Monolith)
+
+> To prepare for microservices, the application must be divided into business modules (**Bounded Contexts**). Each module contains its own isolated `core/` and `adapters/` layers. 
+
+For example:
+```
+src/modules/
+├── messaging/               # Context 1: Handle WhatsApp/API I/O
+│   ├── core/
+│   └── adapters/
+├── audio-processing/        # Context 2: Processing audio, LLM integration
+│   ├── core/
+│   └── adapters/
+```
+
+---
+
+### Rule 10 — Modules are Strictly Isolated
+
+> A module may **never** import code from another module (except for `_shared` kernel logic, which must contain no business rules, such as generic domain base classes). 
+
+Modules must communicate purely asynchronously via integration events (Event Bus/PubSub), or strictly through defined Facades/Application Services. Direct method calls across modules are an anti-pattern when moving to microservices.
+
+---
+
+### Rule 11 — Decentralized Data
+
+> Each module owns its own database tables or collections. Cross-module database joins are **strictly forbidden**. Inter-module data needs must be resolved via asynchronous replication/events or API calls (simulating real microservices).
+
 ---
 
 ### Running Tests

@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ReceiveWhatsappAudioUseCase } from './use-cases/receive-whatsapp-audio.use-case';
-import { ProcessAudioUseCase } from './use-cases/process-audio.use-case';
-import { DeliverProcessedAudioUseCase } from './use-cases/deliver-processed-audio.use-case';
-import { DeliverAudioErrorUseCase } from './use-cases/deliver-audio-error.use-case';
-import { PresentQrCodeUseCase } from './use-cases/present-qr-code.use-case';
+import { ReceiveWhatsappAudioUseCase } from '../modules/messaging/core/use-cases/receive-whatsapp-audio.use-case';
+import { ProcessAudioUseCase } from '../modules/audio-processing/core/use-cases/process-audio.use-case';
+import { DeliverProcessedAudioUseCase } from '../modules/messaging/core/use-cases/deliver-processed-audio.use-case';
+import { DeliverAudioErrorUseCase } from '../modules/messaging/core/use-cases/deliver-audio-error.use-case';
+import { PresentQrCodeUseCase } from '../modules/user/core/use-cases/present-qr-code.use-case';
 
 /**
  * CoreModule — pure application logic.

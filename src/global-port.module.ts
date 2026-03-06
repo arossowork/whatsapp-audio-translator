@@ -8,18 +8,18 @@ import {
     TRANSCRIPTION_PORT,
     AUDIO_SUMMARY_PORT,
     QR_CODE_DISPLAY_PORT,
-} from './core/ports/tokens';
-import { QueueModule } from './adapters/queue/queue.module';
-import { WhatsappBotModule } from './adapters/whatsapp-bot/whatsapp-bot.module';
-import { MockLlmModule } from './adapters/mock-llm/mock-llm.module';
-import { LoggerProviderModule } from './providers/logger/logger-provider.module';
-import { DaprService } from './providers/dapr/dapr.service';
-import { DaprQueueAdapter } from './adapters/queue/dapr-queue.adapter';
-import { WhatsappAudioErrorDeliveryAdapter } from './adapters/whatsapp-bot/whatsapp-audio-error-delivery.adapter';
-import { WhatsappProcessedAudioDeliveryAdapter } from './adapters/whatsapp-bot/whatsapp-processed-audio-delivery.adapter';
-import { MockTranscriptionAdapter } from './adapters/mock-llm/mock-transcription.adapter';
-import { MockAudioSummaryAdapter } from './adapters/mock-llm/mock-audio-summary.adapter';
-import { CliQrCodeDisplayAdapter } from './adapters/qr-code-display/cli-qr-code-display.adapter';
+} from './modules/_shared/core/ports/tokens';
+import { QueueModule } from './modules/_shared/adapters/queue/queue.module';
+import { WhatsappBotModule } from './modules/messaging/adapters/whatsapp-bot/whatsapp-bot.module';
+import { MockLlmModule } from './modules/audio-processing/adapters/llm/mock-llm/mock-llm.module';
+import { LoggerProviderModule } from './modules/_shared/adapters/logger/logger-provider.module';
+import { DaprService } from './modules/_shared/adapters/dapr/dapr.service';
+import { DaprQueueAdapter } from './modules/_shared/adapters/queue/dapr-queue.adapter';
+import { WhatsappAudioErrorDeliveryAdapter } from './modules/messaging/adapters/whatsapp-bot/whatsapp-audio-error-delivery.adapter';
+import { WhatsappProcessedAudioDeliveryAdapter } from './modules/messaging/adapters/whatsapp-bot/whatsapp-processed-audio-delivery.adapter';
+import { MockTranscriptionAdapter } from './modules/audio-processing/adapters/llm/mock-llm/mock-transcription.adapter';
+import { MockAudioSummaryAdapter } from './modules/audio-processing/adapters/llm/mock-llm/mock-audio-summary.adapter';
+import { CliQrCodeDisplayAdapter } from './modules/user/adapters/qr-code-display/cli-qr-code-display.adapter';
 
 const portProviders = [
     {
@@ -39,23 +39,23 @@ const portProviders = [
     },
     {
         provide: AUDIO_ERROR_DELIVERY_PORT,
-        useClass: WhatsappAudioErrorDeliveryAdapter,
+        useExisting: WhatsappAudioErrorDeliveryAdapter,
     },
     {
         provide: PROCESSED_AUDIO_DELIVERY_PORT,
-        useClass: WhatsappProcessedAudioDeliveryAdapter,
+        useExisting: WhatsappProcessedAudioDeliveryAdapter,
     },
     {
         provide: TRANSCRIPTION_PORT,
-        useClass: MockTranscriptionAdapter,
+        useExisting: MockTranscriptionAdapter,
     },
     {
         provide: AUDIO_SUMMARY_PORT,
-        useClass: MockAudioSummaryAdapter,
+        useExisting: MockAudioSummaryAdapter,
     },
     {
         provide: QR_CODE_DISPLAY_PORT,
-        useClass: CliQrCodeDisplayAdapter,
+        useClass: CliQrCodeDisplayAdapter, // Not dependent on CoreModule, can stay useClass
     },
 ];
 
