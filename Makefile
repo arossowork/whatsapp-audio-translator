@@ -24,19 +24,19 @@ deploy-local: docker-build ## Deploy the Local Radius environment (Redis) and th
 	@echo "Registering Local Redis Recipe..."
 	rad recipe register default --template-kind bicep --template-path ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:0.54 --resource-type Applications.Dapr/pubSubBrokers
 	@echo "Deploying Application..."
-	rad deploy app.bicep -a $(APP_NAME) -p port=$(PORT)
+	rad deploy app.bicep -a $(APP_NAME) -p @app.parameters.json -p port=$(PORT)
 
 deploy-aws: docker-build ## Deploy the AWS Radius environment (SQS) and the application
 	@echo "Registering AWS SQS Recipe..."
 	rad recipe register default --template-kind bicep --template-path ghcr.io/radius-project/recipes/aws/sqs:0.54 --resource-type Applications.Dapr/pubSubBrokers
 	@echo "Deploying Application..."
-	rad deploy app.bicep -a $(APP_NAME) -p port=$(PORT)
+	rad deploy app.bicep -a $(APP_NAME) -p @app.parameters.json -p port=$(PORT)
 
 deploy-gcp: docker-build ## Deploy the GCP Radius environment (Pub/Sub) and the application
 	@echo "Registering GCP PubSub Recipe..."
 	rad recipe register default --template-kind bicep --template-path ghcr.io/radius-project/recipes/gcp/pubsubbrokers:0.54 --resource-type Applications.Dapr/pubSubBrokers
 	@echo "Deploying Application..."
-	rad deploy app.bicep -a $(APP_NAME) -p port=$(PORT)
+	rad deploy app.bicep -a $(APP_NAME) -p @app.parameters.json -p port=$(PORT)
 
 purge: ## Purge the Radius application
 	@echo "Purging Radius application..."

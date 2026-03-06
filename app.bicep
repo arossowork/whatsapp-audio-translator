@@ -12,6 +12,9 @@ param port string = '3000'
 @description('The port Dapr sidecar listens on')
 param daprPort string = '3500'
 
+@description('The OpenAI API Key for the LLM Module')
+param openaiApiKey string = ''
+
 // 1. Deploy the Dapr Pub/Sub Broker
 resource daprPubsub 'Applications.Dapr/pubSubBrokers@2023-10-01-preview' = {
   name: 'app-pubsub'
@@ -21,6 +24,20 @@ resource daprPubsub 'Applications.Dapr/pubSubBrokers@2023-10-01-preview' = {
     // Using a Radius Recipe ensures that cloud configurations like SQS/GCP PubSub or Redis are handled transparently.
     recipe: {
       name: 'default'
+    }
+  }
+}
+
+// 2. Deploy a Secret Store for OpenAI API Key
+resource openaiSecretStore 'Applications.Core/secretStores@2023-10-01-preview' = {
+  name: 'openai-secret-store'
+  properties: {
+    environment: environment
+    application: application
+    data: {
+      OPENAI_API_KEY: {
+        value: openaiApiKey
+      }
     }
   }
 }
@@ -51,6 +68,14 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
         }
         DAPR_APP_PORT: {
           value: '3001'
+        }
+        OPENAI_API_KEY: {
+          valueFrom: {
+            secretRef: {
+              source: openaiSecretStore.id
+              key: 'OPENAI_API_KEY'
+            }
+          }
         }
       }
     }
