@@ -1,4 +1,4 @@
-.PHONY: deploy-local deploy-aws deploy-gcp run-local help cluster-restart radius-clean cluster-status app-logs app-qr app-restart
+.PHONY: deploy-local deploy-aws deploy-gcp deploy-remote run-local help cluster-restart radius-clean cluster-status app-logs app-qr app-restart
 
 APP_NAME=next-clean-arch
 # Default port if not supplied
@@ -37,6 +37,16 @@ deploy-gcp: docker-build ## Deploy the GCP Radius environment (Pub/Sub) and the 
 	rad recipe register default --template-kind bicep --template-path ghcr.io/radius-project/recipes/gcp/pubsubbrokers:0.54 --resource-type Applications.Dapr/pubSubBrokers
 	@echo "Deploying Application..."
 	rad deploy app.bicep -a $(APP_NAME) -p @app.parameters.json -p port=$(PORT)
+
+deploy-remote: ## Deploy a pre-built image to a remote k3d cluster (IMAGE=ghcr.io/…:sha)
+	@test -n "$(IMAGE)" || (echo "ERROR: IMAGE is required. Usage: make deploy-remote IMAGE=ghcr.io/owner/repo:tag"; exit 1)
+	@echo "Importing $(IMAGE) into k3d cluster (radius)..."
+	docker pull $(IMAGE)
+	k3d image import $(IMAGE) -c radius
+	@echo "Registering Local Redis Recipe..."
+	rad recipe register default --template-kind bicep --template-path ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:0.54 --resource-type Applications.Dapr/pubSubBrokers
+	@echo "Deploying Application with image $(IMAGE)..."
+	rad deploy app.bicep -a $(APP_NAME) -p @app.parameters.json -p port=$(PORT) -p containerImage=$(IMAGE) -p imagePullPolicy=Never
 
 purge: ## Purge the Radius application
 	@echo "Purging Radius application..."

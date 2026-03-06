@@ -84,3 +84,132 @@ If the local `radius` deployment stalls or fails to pull images, use the built-i
 - `make cluster-restart`: Restarts the local k3d environment.
 - `make radius-clean`: Deletes failing Radius pods to trigger recreation.
 - `make cluster-status`: Check the status of the local pods across all namespaces.
+
+---
+
+## 9. Deploying to a Remote VPS
+
+### Choosing a VPS
+
+For a starter deployment, a standard **Contabo Cloud VPS S** (~$4.95/mo) is the cheapest option with enough resources to run k3d + Radius + this app:
+
+| Spec | Contabo VPS S |
+|---|---|
+| vCPU | 4 |
+| RAM | 8 GB |
+| Storage | 75 GB NVMe |
+| Price | ~$4.95/mo |
+| Bandwidth | Unlimited (fair use) |
+
+> **Alternatives:** Hetzner CX23 (~€3.49/mo, 2 vCPU/4GB) is also viable if you prefer better network performance and EU-based hosting.
+
+### VPS Initial Setup
+
+SSH into your fresh VPS and run the following steps to install the full stack.
+
+#### 1. Install Docker
+
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+# Log out and back in so Docker group takes effect
+```
+
+#### 2. Install kubectl
+
+```bash
+curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+```
+
+#### 3. Install k3d
+
+```bash
+curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+```
+
+#### 4. Create the k3d Cluster
+
+```bash
+k3d cluster create radius --wait
+```
+
+#### 5. Install Radius CLI and Initialize
+
+```bash
+# Install rad CLI
+wget -q "https://raw.githubusercontent.com/radius-project/radius/main/deploy/install.sh" -O - | /bin/bash
+
+# Initialize Radius on the cluster
+rad install kubernetes
+rad group create default
+rad env create default --group default
+rad workspace create kubernetes default --group default --env default
+```
+
+#### 6. Clone the Repository
+
+```bash
+sudo mkdir -p /opt/next-clean-arch
+sudo chown $USER:$USER /opt/next-clean-arch
+git clone https://github.com/<YOUR_GITHUB_USER>/next-clean-arch.git /opt/next-clean-arch
+```
+
+#### 7. Set Up a Deploy SSH Key
+
+On the VPS, create a dedicated deploy user (or use your existing user). On your **local machine**, generate an SSH key pair:
+
+```bash
+ssh-keygen -t ed25519 -C "github-deploy" -f ~/.ssh/vps_deploy_key -N ""
+```
+
+Copy the **public** key to the VPS:
+
+```bash
+ssh-copy-id -i ~/.ssh/vps_deploy_key.pub <user>@<VPS_IP>
+```
+
+You will add the **private** key as a GitHub Secret in the next section.
+
+### GitHub Secrets Configuration
+
+Go to your repository → **Settings → Secrets and variables → Actions** and add:
+
+| Secret | Value |
+|---|---|
+| `VPS_HOST` | Your VPS public IP address |
+| `VPS_USER` | SSH username on the VPS (e.g. `root` or `deploy`) |
+| `VPS_SSH_KEY` | Contents of `~/.ssh/vps_deploy_key` (the **private** key) |
+| `OPENAI_API_KEY` | Your OpenAI API key for the LLM adapter |
+
+> **Note:** GHCR authentication uses the built-in `GITHUB_TOKEN` — no additional secret is needed for pushing/pulling images.
+
+### Automated Deployment (GitHub Actions)
+
+Every push to `main` triggers the CI/CD pipeline (`.github/workflows/deploy.yml`):
+
+1. **Test** — Runs lint and unit tests
+2. **Build & Push** — Builds the Docker image, pushes to `ghcr.io/<owner>/next-clean-arch:<sha>` and `:latest`
+3. **Deploy** — SSHes into the VPS, imports the image into k3d, and runs `rad deploy`
+
+Simply push or merge to `main` and the deployment happens automatically.
+
+### Manual Remote Deployment
+
+If you need to deploy manually from the VPS itself:
+
+```bash
+ssh <user>@<VPS_IP>
+cd /opt/next-clean-arch
+git pull origin main
+
+# Deploy with a specific GHCR image
+make deploy-remote IMAGE=ghcr.io/<owner>/next-clean-arch:latest
+```
+
+Or build and deploy locally on the VPS:
+
+```bash
+make deploy-local
+```
+

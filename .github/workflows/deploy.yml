@@ -1,0 +1,102 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  build-and-push:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+
+            # Ensure k3d cluster is running
+            k3d cluster list | grep -q radius || {
+              echo "ERROR: k3d 'radius' cluster not found. Run the VPS setup first."
+              exit 1
+            }
+
+            # Import the image into k3d from the registry
+            docker pull "$IMAGE"
+            k3d image import "$IMAGE" -c radius
+
+            # Register the local-dev recipe (idempotent)
+            rad recipe register default \
+              --template-kind bicep \
+              --template-path ghcr.io/radius-project/recipes/local-dev/pubsubbrokers:0.54 \
+              --resource-type Applications.Dapr/pubSubBrokers
+
+            # Deploy with the new image
+            cd /opt/next-clean-arch
+            git pull --ff-only origin main
+            rad deploy app.bicep \
+              -a next-clean-arch \
+              -p environment=/planes/radius/local/resourceGroups/default/providers/Applications.Core/environments/default \
+              -p containerImage="$IMAGE" \
+              -p imagePullPolicy=Never \
+              -p openaiApiKey="${{ secrets.OPENAI_API_KEY }}"

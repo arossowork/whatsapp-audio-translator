@@ -15,6 +15,12 @@ param daprPort string = '3500'
 @description('The OpenAI API Key for the LLM Module')
 param openaiApiKey string = ''
 
+@description('The container image reference (e.g. ghcr.io/owner/repo:sha)')
+param containerImage string = 'next-clean-arch:latest'
+
+@description('Image pull policy: Never for local k3d, Always for remote registry')
+param imagePullPolicy string = 'Never'
+
 @description('A timestamp used to force a Kubernetes rollout on every deploy')
 param deployTimestamp string = utcNow()
 
@@ -52,8 +58,8 @@ resource backend 'Applications.Core/containers@2023-10-01-preview' = {
     application: application
     environment: environment
     container: {
-      image: 'next-clean-arch:latest'
-      imagePullPolicy: 'Never'
+      image: containerImage
+      imagePullPolicy: imagePullPolicy
       ports: {
         app: {
           containerPort: int(port)
