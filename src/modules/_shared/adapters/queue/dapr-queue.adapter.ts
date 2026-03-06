@@ -15,8 +15,10 @@ export class DaprQueueAdapter<T> {
 
     async enqueue(item: T): Promise<void> {
         this.logger.log(`Publishing to ${this.pubsubName}/${this.topicName}`);
-        // Dapr client publish expects object or string.
-        await this.daprService.client.pubsub.publish(this.pubsubName, this.topicName, item as any);
+
+        // Pass item as a plain object to prevent Dapr SDK from calling .toString() on class instances and sending "[object Object]"
+        const plainObject = JSON.parse(JSON.stringify(item));
+        await this.daprService.client.pubsub.publish(this.pubsubName, this.topicName, plainObject);
         this.logger.debug(`Published to ${this.pubsubName}/${this.topicName}`);
     }
 
@@ -34,9 +36,23 @@ export class DaprQueueAdapter<T> {
                     this.logger.debug(`Received message from ${this.pubsubName}/${this.topicName} — notifying ${this.listeners.length} listener(s)`);
 
                     let parsedData = data;
+
+                    try {
+                        let toLog = data;
+                        if (typeof data === 'object' && data !== null) {
+                            toLog = Array.isArray(data) ? '[ARRAY]' : { ...data };
+                            if (toLog.data && toLog.data.audioContent) toLog.data.audioContent = '[TRUNCATED]';
+                            if (toLog.audioContent) toLog.audioContent = '[TRUNCATED]';
+                        }
+                        console.log(`[DaprQueueAdapter] raw data type: ${typeof data}, isArray: ${Array.isArray(data)}, value:`, JSON.stringify(toLog, null, 2).substring(0, 1000));
+                    } catch (e) {
+                        console.log('[DaprQueueAdapter DEBUG] failed to log data', e);
+                    }
+
                     if (data && typeof data === 'object') {
                         // Check if it's still wrapped in a CloudEvent or contains a data wrapper
                         if ('data' in data && data.data) {
+                            console.log('[DaprQueueAdapter DEBUG] unwrapping data from payload');
                             parsedData = data.data;
                         }
                     }
