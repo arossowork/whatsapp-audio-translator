@@ -36,7 +36,7 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
             this.logger.log('WhatsApp Client is ready!');
         });
 
-        this.client.on('message', async (message: Message) => {
+        this.client.on('message_create', async (message: Message) => {
             await this.handleMessage(message);
         });
 
