@@ -11,6 +11,9 @@ describe('OpenaiAudioSummaryAdapter', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
+        // Mock environment variable
+        process.env.OPENAI_API_KEY = Buffer.from('test-api-key').toString('base64');
+
         mockOpenAlInstance = {
             chat: {
                 completions: {
@@ -28,6 +31,11 @@ describe('OpenaiAudioSummaryAdapter', () => {
         };
 
         adapter = new OpenaiAudioSummaryAdapter(mockLogger as any);
+    });
+
+    afterEach(() => {
+        delete process.env.OPENAI_API_KEY;
+        jest.clearAllMocks();
     });
 
     it('should summarize transcription using OpenAI Chat API', async () => {

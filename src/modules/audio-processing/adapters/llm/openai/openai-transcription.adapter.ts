@@ -16,9 +16,17 @@ export class OpenaiTranscriptionAdapter implements TranscriptionPort {
     constructor(
         @Inject(LOGGER_PORT) private readonly logger: LoggerPort,
     ) {
-        this.openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-        });
+        const apiKey = process.env.OPENAI_API_KEY;
+
+        if (!apiKey) {
+            this.logger.error('OpenaiTranscriptionAdapter', 'OPENAI_API_KEY is not set');
+            throw new Error('OPENAI_API_KEY is not set');
+        }
+
+        // The key is injected as a base64 encoded string from the Radius secret store
+        const decodedApiKey = Buffer.from(apiKey, 'base64').toString('utf-8');
+
+        this.openai = new OpenAI({ apiKey: decodedApiKey });
     }
 
     async transcribe(whatsappAudioId: string, audioContent: string): Promise<Transcription> {

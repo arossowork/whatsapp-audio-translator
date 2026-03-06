@@ -2,6 +2,7 @@ import { OpenaiTranscriptionAdapter } from './openai-transcription.adapter';
 import OpenAI from 'openai';
 import { Transcription } from '../../../core/domain/transcription.entity';
 import * as fs from 'fs';
+import { LoggerPort } from '../../../../_shared/core/ports/logger.port';
 
 jest.mock('openai');
 jest.mock('fs', () => ({
@@ -13,9 +14,13 @@ jest.mock('fs', () => ({
 describe('OpenaiTranscriptionAdapter', () => {
     let adapter: OpenaiTranscriptionAdapter;
     let mockOpenAlInstance: any;
+    let loggerMock: jest.Mocked<LoggerPort>;
 
     beforeEach(() => {
         jest.clearAllMocks();
+
+        // Mock environment variable
+        process.env.OPENAI_API_KEY = Buffer.from('test-api-key').toString('base64');
 
         // Mock the implementation of the class to return our specific spy object
         mockOpenAlInstance = {
@@ -27,14 +32,20 @@ describe('OpenaiTranscriptionAdapter', () => {
         };
         (OpenAI as unknown as jest.Mock).mockImplementation(() => mockOpenAlInstance);
 
-        const mockLogger = {
+        loggerMock = {
             log: jest.fn(),
-            warn: jest.fn(),
             error: jest.fn(),
+            warn: jest.fn(),
             debug: jest.fn(),
-        };
+            verbose: jest.fn(),
+        } as unknown as jest.Mocked<LoggerPort>;
 
-        adapter = new OpenaiTranscriptionAdapter(mockLogger);
+        adapter = new OpenaiTranscriptionAdapter(loggerMock);
+    });
+
+    afterEach(() => {
+        delete process.env.OPENAI_API_KEY;
+        jest.clearAllMocks();
     });
 
     it('should transcribe audio using OpenAI Whisper', async () => {

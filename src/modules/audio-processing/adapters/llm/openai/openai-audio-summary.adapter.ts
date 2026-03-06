@@ -13,11 +13,19 @@ export class OpenaiAudioSummaryAdapter implements AudioSummaryPort {
     constructor(
         @Inject(LOGGER_PORT) private readonly logger: LoggerPort,
     ) {
-        this.openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-        });
+        const apiKey = process.env.OPENAI_API_KEY;
 
-        this.systemPrompt = `You are an expert summarizer. 
+        if (!apiKey) {
+            this.logger.error('OpenaiAudioSummaryAdapter', 'OPENAI_API_KEY is not set');
+            throw new Error('OPENAI_API_KEY is not set');
+        }
+
+        // The key is injected as a base64 encoded string from the Radius secret store
+        const decodedApiKey = Buffer.from(apiKey, 'base64').toString('utf-8');
+
+        this.openai = new OpenAI({ apiKey: decodedApiKey });
+
+        this.systemPrompt = `You are an expert summarizer.
 Your task is to provide a concise, accurate summary of the provided text transcription.
 The summary should be no longer than 3-4 sentences.
 Capture the main points and intent of the speaker.`;
