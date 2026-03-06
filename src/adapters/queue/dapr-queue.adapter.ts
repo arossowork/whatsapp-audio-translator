@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DaprService } from '../../providers/dapr/dapr.service';
 
 @Injectable()
 export class DaprQueueAdapter<T> {
+    private readonly logger = new Logger(DaprQueueAdapter.name);
     private readonly listeners: ((item: T) => void)[] = [];
     private isSubscribed = false;
 
@@ -13,19 +14,24 @@ export class DaprQueueAdapter<T> {
     ) { }
 
     async enqueue(item: T): Promise<void> {
+        this.logger.log(`Publishing to ${this.pubsubName}/${this.topicName}`);
         // Dapr client publish expects object or string.
         await this.daprService.client.pubsub.publish(this.pubsubName, this.topicName, item as any);
+        this.logger.debug(`Published to ${this.pubsubName}/${this.topicName}`);
     }
 
     subscribe(callback: (item: T) => void): void {
         this.listeners.push(callback);
+        this.logger.log(`Subscriber registered for ${this.pubsubName}/${this.topicName} — total=${this.listeners.length}`);
 
         if (!this.isSubscribed) {
             this.isSubscribed = true;
+            this.logger.log(`Setting up Dapr subscription for ${this.pubsubName}/${this.topicName}`);
             this.daprService.server.pubsub.subscribe(
                 this.pubsubName,
                 this.topicName,
                 async (data: T) => {
+                    this.logger.debug(`Received message from ${this.pubsubName}/${this.topicName} — notifying ${this.listeners.length} listener(s)`);
                     for (const listener of this.listeners) {
                         listener(data);
                     }

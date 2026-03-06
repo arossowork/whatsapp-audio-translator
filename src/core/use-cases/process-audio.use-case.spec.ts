@@ -8,6 +8,7 @@ import { AudioSummaryPort } from '../ports/audio-summary.port';
 import { ProcessedAudioQueuePort } from '../ports/processed-audio-queue.port';
 import { AudioErrorQueuePort } from '../ports/audio-error-queue.port';
 import { AudioProcessingQueuePort } from '../ports/audio-processing-queue.port';
+import { LoggerPort } from '../ports/logger.port';
 
 describe('ProcessAudioUseCase (Observer Pattern)', () => {
     let useCase: ProcessAudioUseCase;
@@ -16,6 +17,7 @@ describe('ProcessAudioUseCase (Observer Pattern)', () => {
     let fakeProcessedQueue: ProcessedAudioQueuePort;
     let fakeErrorQueue: AudioErrorQueuePort;
     let fakeProcessingQueue: AudioProcessingQueuePort;
+    let fakeLogger: LoggerPort;
 
     let onModuleInitCallback: (audio: WhatsappAudio) => Promise<void>;
 
@@ -40,12 +42,19 @@ describe('ProcessAudioUseCase (Observer Pattern)', () => {
                 onModuleInitCallback = cb;
             }),
         };
+        fakeLogger = {
+            log: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+        };
         useCase = new ProcessAudioUseCase(
             fakeTranscriptionPort,
             fakeSummaryPort,
             fakeProcessedQueue,
             fakeErrorQueue,
             fakeProcessingQueue,
+            fakeLogger,
         );
     });
 
@@ -53,6 +62,15 @@ describe('ProcessAudioUseCase (Observer Pattern)', () => {
         useCase.onModuleInit();
         expect(fakeProcessingQueue.subscribe).toHaveBeenCalledTimes(1);
         expect(onModuleInitCallback).toBeDefined();
+    });
+
+    it('should log when subscribing to the queue', () => {
+        useCase.onModuleInit();
+
+        expect(fakeLogger.log).toHaveBeenCalledWith(
+            'ProcessAudioUseCase',
+            expect.stringContaining('Subscribed'),
+        );
     });
 
     it('should process audio successfully and enqueue the result when item is emitted', async () => {
@@ -78,6 +96,35 @@ describe('ProcessAudioUseCase (Observer Pattern)', () => {
         expect(fakeErrorQueue.enqueue).not.toHaveBeenCalled();
     });
 
+    it('should log at each processing step on success', async () => {
+        useCase.onModuleInit();
+
+        const audio = new WhatsappAudio('audio-123', 'content', 'sender', 'sender');
+        const transcription = new Transcription('audio-123', [new TranscriptionSegment(0, 10, 'hello')], 'hello');
+
+        (fakeTranscriptionPort.transcribe as jest.Mock).mockResolvedValue(transcription);
+        (fakeSummaryPort.summarize as jest.Mock).mockResolvedValue('summary text');
+
+        await onModuleInitCallback(audio);
+
+        expect(fakeLogger.log).toHaveBeenCalledWith(
+            'ProcessAudioUseCase',
+            expect.stringContaining('Processing started'),
+        );
+        expect(fakeLogger.log).toHaveBeenCalledWith(
+            'ProcessAudioUseCase',
+            expect.stringContaining('Transcription completed'),
+        );
+        expect(fakeLogger.log).toHaveBeenCalledWith(
+            'ProcessAudioUseCase',
+            expect.stringContaining('Summarization completed'),
+        );
+        expect(fakeLogger.log).toHaveBeenCalledWith(
+            'ProcessAudioUseCase',
+            expect.stringContaining('processed successfully'),
+        );
+    });
+
     it('should enqueue an error if transcription fails', async () => {
         useCase.onModuleInit();
 
@@ -93,6 +140,21 @@ describe('ProcessAudioUseCase (Observer Pattern)', () => {
         expect(processingError.whatsappAudioId).toBe('audio-123');
         expect(processingError.reason).toContain('Transcription failed');
         expect(fakeProcessedQueue.enqueue).not.toHaveBeenCalled();
+    });
+
+    it('should log error when processing fails', async () => {
+        useCase.onModuleInit();
+
+        const audio = new WhatsappAudio('audio-123', 'content', 'sender', 'sender');
+        (fakeTranscriptionPort.transcribe as jest.Mock).mockRejectedValue(new Error('Transcription failed'));
+
+        await onModuleInitCallback(audio);
+
+        expect(fakeLogger.error).toHaveBeenCalledWith(
+            'ProcessAudioUseCase',
+            expect.stringContaining('failed'),
+            expect.any(String),
+        );
     });
 
     it('should enqueue an error if summarization fails', async () => {

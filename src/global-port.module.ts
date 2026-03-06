@@ -7,11 +7,12 @@ import {
     PROCESSED_AUDIO_DELIVERY_PORT,
     TRANSCRIPTION_PORT,
     AUDIO_SUMMARY_PORT,
-    QR_CODE_DISPLAY_PORT
+    QR_CODE_DISPLAY_PORT,
 } from './core/ports/tokens';
 import { QueueModule } from './adapters/queue/queue.module';
 import { WhatsappBotModule } from './adapters/whatsapp-bot/whatsapp-bot.module';
 import { MockLlmModule } from './adapters/mock-llm/mock-llm.module';
+import { LoggerProviderModule } from './providers/logger/logger-provider.module';
 import { DaprService } from './providers/dapr/dapr.service';
 import { DaprQueueAdapter } from './adapters/queue/dapr-queue.adapter';
 import { WhatsappAudioErrorDeliveryAdapter } from './adapters/whatsapp-bot/whatsapp-audio-error-delivery.adapter';
@@ -60,7 +61,7 @@ const portProviders = [
 
 @Global()
 @Module({
-    imports: [QueueModule, WhatsappBotModule, MockLlmModule],
+    imports: [QueueModule, WhatsappBotModule, MockLlmModule, LoggerProviderModule],
     providers: portProviders,
     exports: portProviders.map(p => p.provide),
 })

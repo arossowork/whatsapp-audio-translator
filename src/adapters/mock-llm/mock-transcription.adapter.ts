@@ -7,13 +7,12 @@ export class MockTranscriptionAdapter implements TranscriptionPort {
     private readonly logger = new Logger(MockTranscriptionAdapter.name);
 
     async transcribe(whatsappAudioId: string, audioContent: string): Promise<Transcription> {
-        this.logger.debug(`Simulating transcription for audio ID: ${whatsappAudioId}`);
+        this.logger.debug(`[audioId=${whatsappAudioId}] Simulating transcription — input size=${audioContent.length} chars`);
 
         // Simulate a delay
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        // Return a dummy transcription
-        return new Transcription(
+        const transcription = new Transcription(
             whatsappAudioId,
             [
                 { startTimestamp: 0, endTimestamp: 1000, text: 'Hello, this is a mock transcription.' },
@@ -21,5 +20,8 @@ export class MockTranscriptionAdapter implements TranscriptionPort {
             ],
             'Hello, this is a mock transcription. It works perfectly!'
         );
+
+        this.logger.debug(`[audioId=${whatsappAudioId}] Transcription complete — ${transcription.segments.length} segments`);
+        return transcription;
     }
 }

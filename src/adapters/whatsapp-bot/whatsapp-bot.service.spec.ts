@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { WhatsappBotService } from './whatsapp-bot.service';
 import { ReceiveWhatsappAudioUseCase } from '../../core/use-cases/receive-whatsapp-audio.use-case';
 import { PresentQrCodeUseCase } from '../../core/use-cases/present-qr-code.use-case';
+import { CORRELATION_CONTEXT_PORT } from '../../core/ports/tokens';
 import { WhatsappAudio } from '../../core/domain/whatsapp-audio.entity';
 
 describe('WhatsappBotService', () => {
@@ -18,6 +19,11 @@ describe('WhatsappBotService', () => {
             execute: jest.fn(),
         };
 
+        const mockCorrelationContext = {
+            run: jest.fn().mockImplementation((_data, fn) => fn()),
+            get: jest.fn(),
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 WhatsappBotService,
@@ -28,6 +34,10 @@ describe('WhatsappBotService', () => {
                 {
                     provide: PresentQrCodeUseCase,
                     useValue: mockPresentQrCodeUseCase,
+                },
+                {
+                    provide: CORRELATION_CONTEXT_PORT,
+                    useValue: mockCorrelationContext,
                 },
             ],
         }).compile();

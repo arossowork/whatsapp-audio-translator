@@ -1,9 +1,12 @@
 import { Injectable, Inject, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { Client, LocalAuth, Message } from 'whatsapp-web.js';
+import { randomUUID } from 'crypto';
 import { ReceiveWhatsappAudioUseCase } from '../../core/use-cases/receive-whatsapp-audio.use-case';
 import { PresentQrCodeUseCase } from '../../core/use-cases/present-qr-code.use-case';
 import { WhatsappAudio } from '../../core/domain/whatsapp-audio.entity';
 import { QrCode } from '../../core/domain/qr-code.entity';
+import type { CorrelationContextPort } from '../../core/ports/correlation-context.port';
+import { CORRELATION_CONTEXT_PORT } from '../../core/ports/tokens';
 
 @Injectable()
 export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
@@ -13,6 +16,8 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     constructor(
         private readonly receiveWhatsappAudio: ReceiveWhatsappAudioUseCase,
         private readonly presentQrCodeUseCase: PresentQrCodeUseCase,
+        @Inject(CORRELATION_CONTEXT_PORT)
+        private readonly correlationContext: CorrelationContextPort,
     ) { }
 
     async onModuleInit() {
@@ -56,23 +61,34 @@ export class WhatsappBotService implements OnModuleInit, OnModuleDestroy {
     }
 
     async handleMessage(message: any): Promise<void> {
+        this.logger.log(`Message received from ${message.from} — type=${message.type} hasMedia=${message.hasMedia}`);
+
         // Types from whatsapp-web.js: 'ptt' for voice notes, 'audio' for audio files
         if (message.hasMedia && (message.type === 'ptt' || message.type === 'audio')) {
+            const correlationId = randomUUID();
+            const whatsappAudioId = message.id._serialized;
+
+            this.logger.log(`[cid=${correlationId}] [audioId=${whatsappAudioId}] Audio message detected — downloading media`);
+
             try {
                 const media = await message.downloadMedia();
 
                 const audio = new WhatsappAudio(
-                    message.id._serialized,
+                    whatsappAudioId,
                     media.data, // base64 representation
                     message.from,
                     message.to,
-                    new Date() // Using default in constructor is fine, but can explicitly pass if needed
+                    new Date(),
                 );
 
-                this.receiveWhatsappAudio.execute(audio);
-                this.logger.log(`Received and processed audio message from ${message.from}`);
+                this.logger.log(`[cid=${correlationId}] [audioId=${whatsappAudioId}] Media downloaded — forwarding to use case`);
+
+                this.correlationContext.run(
+                    { correlationId, whatsappAudioId },
+                    () => this.receiveWhatsappAudio.execute(audio),
+                );
             } catch (error) {
-                this.logger.error(`Failed to process audio message from ${message.from}`, error);
+                this.logger.error(`[cid=${correlationId}] [audioId=${whatsappAudioId}] Failed to process audio message`, error);
             }
         }
     }

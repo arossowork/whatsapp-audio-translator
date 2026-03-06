@@ -54,6 +54,10 @@ cluster-status: ## Check the status of the local kubernetes cluster pods
 	@echo "Checking pods in all namespaces..."
 	kubectl get pods -A
 
+namespace-status: ## Check the status of the local kubernetes cluster pods in the application namespace
+	@echo "Checking pods in namespace $(NAMESPACE)..."
+	kubectl get pods -n $(NAMESPACE)
+
 app-logs: ## Tail the logs of the next-clean-arch application pod
 	@echo "Tailing application logs in namespace $(NAMESPACE)..."
 	kubectl logs -l app.kubernetes.io/name=$(APP_NAME) -n $(NAMESPACE) -c $(APP_NAME) -f --tail=100
