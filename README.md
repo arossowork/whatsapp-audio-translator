@@ -32,10 +32,10 @@ Transform audio into structured, readable, and translatable text with intelligen
 ## 5. Feature Breakdown (MVP vs. Backlog)
 
 ### Minimum Viable Product (MVP) - The WhatsApp Bot
-- **WhatsApp Bot Interface**: User forwards audio messages to a dedicated WhatsApp Bot number.
-- **Server Processing Pipeline**: The server receives the audio, processes it using STT (e.g., Whisper) and an LLM (e.g., GPT-4o-mini).
+- **WhatsApp Bot Interface**: User sends or forwards audio messages to the bot number.
+- **QR Code Authentication**: The bot runs right on the server and authenticates using WhatsApp Web via Puppeteer. Upon startup, it generates a QR code in the server terminal, which the user scans with their WhatsApp app to instantly log in the bot.
+- **Server Processing Pipeline**: The server receives the audio using `whatsapp-web.js`, processes it via a Message Queue (Dapr Pub/Sub), triggers STT (e.g., Whisper) and an LLM (e.g., GPT-4o-mini).
 - **Instant Summary**: The bot replies directly in WhatsApp with the translated summary.
-- **Web App Link for Full Transcript**: The bot provides a link to a simple web view where the user can read the full original and translated transcript.
 
 ### Backlog / Future Enhancements (Progressive Web App)
 - **Full PWA Dashboard**: A dedicated web app to see the history/wall of all processed audios.
@@ -44,15 +44,43 @@ Transform audio into structured, readable, and translatable text with intelligen
 - **Voice Output (TTS)**: Generate a translated audio reply using a cloned synthetic voice.
 
 ## 6. Architecture & Platform Strategy
-Based on minimizing friction, the strategy is a **Hybrid Bot + Web App** approach:
-1. **The Entry Point (WhatsApp Bot)**: Solves the share-sheet problem natively. Users already know how to forward messages in WhatsApp. Zero app installation required.
-2. **The Server**: Handles the webhook events, downloads the audio, and runs the Whisper + LLM pipeline.
+The project follows **Clean Architecture** (Ports & Adapters) principles built on a **NestJS** core. 
+
+1. **The Entry Point (WhatsApp Bot)**: Uses `whatsapp-web.js`. Solves the share-sheet problem natively. Upon starting, the terminal displays a QR Code to link the WhatsApp session.
+2. **Event-Driven Pub/Sub**: Uses **Dapr** as the underlying broker to manage scalable asynchronous queues for audio processing and delivery logic.
 3. **The Web Interface**: A Progressive Web App (PWA) that initially serves as a simple viewer for long transcripts, but will eventually evolve into the full dashboard.
 
 **PM Recommendation:**
-Execute strictly on the MVP (Bot + Transcript viewer URL) first to validate the core value proposition. Leave the full PWA dashboard and interactive clicking on the backlog.
+Execute strictly on the MVP (Bot) first to validate the core value proposition. Leave the full PWA dashboard and interactive clicking on the backlog.
 
 ## 7. Next Steps & Technical Decisions
-1. **Choose WhatsApp API Provider**: Twilio, Meta Cloud API (official), or an unofficial library (like Baileys/Whatsapp-web.js) for the MVP.
-2. **Define Server Stack**: e.g., Node.js/Python backend with OpenAI API integration.
-3. **Data Privacy & Storage**: Define how long audio files and transcripts are retained since this is highly sensitive data.
+1. **Choose STT and LLM Integration**: Implement real Whisper and GPT-4 STT and LLM adapters to replace the mocks.
+2. **Data Privacy & Storage**: Define how long audio files and transcripts are retained since this is highly sensitive data. Add database adapters.
+
+## 8. Deployment and Running Locally
+The application makes use of **Radius** and **Dapr** for simple declarative environments and deployment. A convenient `Makefile` encapsulates commands.
+
+### Requirements
+- Docker
+- k3d
+- Radius CLI (`rad`)
+
+### Running Locally
+1. Start deployment:
+   ```bash
+   make deploy-local
+   ```
+   This will build the Docker container and deploy the app along with a local Redis pub/sub broker to a k3d `radius` cluster.
+
+2. **Authenticate the Bot**:
+   Observe the pod logs to scan the QR Code that connects the `whatsapp-bot.js` client:
+   ```bash
+   kubectl logs -l app=next-clean-arch --follow
+   ```
+   *Scan the generated QR code with your phone's WhatsApp.*
+
+### Troubleshooting
+If the local `radius` deployment stalls or fails to pull images, use the built-in troubleshooting `Makefile` targets:
+- `make cluster-restart`: Restarts the local k3d environment.
+- `make radius-clean`: Deletes failing Radius pods to trigger recreation.
+- `make cluster-status`: Check the status of the local pods across all namespaces.

@@ -1,4 +1,4 @@
-.PHONY: deploy-local deploy-aws deploy-gcp run-local help
+.PHONY: deploy-local deploy-aws deploy-gcp run-local help cluster-restart radius-clean cluster-status
 
 APP_NAME=next-clean-arch
 # Default port if not supplied
@@ -39,3 +39,15 @@ deploy-gcp: docker-build ## Deploy the GCP Radius environment (Pub/Sub) and the 
 purge: ## Purge the Radius application
 	@echo "Purging Radius application..."
 	rad app delete $(APP_NAME) --yes
+
+cluster-restart: ## Restart the local k3d radius cluster to fix networking or image pull issues
+	@echo "Restarting k3d 'radius' cluster..."
+	k3d cluster stop radius && k3d cluster start radius
+
+radius-clean: ## Delete stuck Radius system pods to force an image pull retry
+	@echo "Deleting Radius system pods to force recreation..."
+	kubectl delete pod -n radius-system -l app.kubernetes.io/part-of=radius
+
+cluster-status: ## Check the status of the local kubernetes cluster pods
+	@echo "Checking pods in all namespaces..."
+	kubectl get pods -A
